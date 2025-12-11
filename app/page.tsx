@@ -1,126 +1,145 @@
-'use client';
+"use client"; // <--- THIS IS LIKELY WHAT WAS MISSING
 
-import { useState } from 'react';
-import UploadForm from './components/UploadForm';
+import { useState } from "react";
+// If you have a separate ResultDisplay component, import it. 
+// If not, we can render it simply right here to be safe.
 
 export default function Home() {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [style, setStyle] = useState("Modern");
+  const [budget, setBudget] = useState(50);
+  const [file, setFile] = useState<File | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!file) return alert("Please upload an image first!");
+    
+    setLoading(true);
+    
+    try {
+      // Convert image to Base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      reader.onload = async () => {
+        const base64Image = reader.result;
+        
+        // Send to API
+        const response = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            image: base64Image, 
+            style, 
+            budget 
+          }),
+        });
+
+        const data = await response.json();
+        setResult(data);
+        setLoading(false);
+      };
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong. Check console for details.");
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-black">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        {/* Gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/20 via-black to-black"></div>
+    <main className="min-h-screen bg-black text-white p-8 font-sans">
+      <div className="max-w-2xl mx-auto space-y-8">
         
-        {/* Animated background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-green-500 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        {/* HEADER */}
+        <div className="text-center space-y-4">
+          <h1 className="text-5xl font-bold text-green-400">UpcycleAI</h1>
+          <p className="text-xl text-gray-300">Turn ugly furniture into luxury for cheap.</p>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
-          <div className="text-center space-y-8">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-              </span>
-              <span className="text-emerald-400 text-sm font-medium">AI-Powered Sustainability</span>
-            </div>
-
-            {/* Main Heading */}
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight">
-              <span className="text-white">Transform Your </span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-400">
-                Furniture
-              </span>
-              <br />
-              <span className="text-white">The Sustainable Way</span>
-            </h1>
-
-            {/* Subtitle */}
-            <p className="max-w-2xl mx-auto text-lg sm:text-xl text-gray-300 leading-relaxed">
-              Upload a photo of your rental furniture and get instant AI-powered DIY transformation ideas. 
-              Budget-friendly, renter-friendly, and planet-friendly solutions in seconds.
-            </p>
-
-            {/* Stats */}
-            <div className="flex flex-wrap justify-center gap-8 pt-8">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-400">100%</div>
-                <div className="text-sm text-gray-400">Renter-Friendly</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-400">AI</div>
-                <div className="text-sm text-gray-400">Powered</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-400">♻️</div>
-                <div className="text-sm text-gray-400">Sustainable</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Upload Form Section */}
-      <section className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-gradient-to-br from-gray-900 to-black border border-emerald-500/20 rounded-2xl p-8 shadow-2xl">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-3">
-              Start Your Transformation
-            </h2>
-            <p className="text-gray-400">
-              Upload your furniture photo and let AI work its magic
-            </p>
-          </div>
+        {/* INPUT FORM */}
+        <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 space-y-6">
           
-          <UploadForm />
-        </div>
-      </section>
+          {/* File Upload */}
+          <div className="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center hover:border-green-500 transition-colors">
+            <input type="file" onChange={handleFileChange} className="text-white" />
+            <p className="mt-2 text-sm text-gray-500">Upload your furniture photo</p>
+          </div>
 
-      {/* How It Works Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <h2 className="text-4xl font-bold text-center text-white mb-16">
-          How It <span className="text-emerald-400">Works</span>
-        </h2>
-        
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              step: '01',
-              title: 'Upload Photo',
-              description: 'Take a photo of your furniture that needs a refresh'
-            },
-            {
-              step: '02',
-              title: 'Choose Style & Budget',
-              description: 'Select your preferred style and set your budget limit'
-            },
-            {
-              step: '03',
-              title: 'Get AI Suggestions',
-              description: 'Receive personalized DIY transformation ideas instantly'
-            }
-          ].map((item, index) => (
-            <div key={index} className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-green-500/10 rounded-xl blur-xl group-hover:blur-2xl transition-all"></div>
-              <div className="relative bg-gray-900/50 border border-emerald-500/20 rounded-xl p-8 hover:border-emerald-500/40 transition-all">
-                <div className="text-5xl font-bold text-emerald-500/20 mb-4">{item.step}</div>
-                <h3 className="text-xl font-bold text-white mb-3">{item.title}</h3>
-                <p className="text-gray-400">{item.description}</p>
-              </div>
+          {/* Controls */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Style</label>
+              <select 
+                value={style} 
+                onChange={(e) => setStyle(e.target.value)}
+                className="w-full bg-gray-800 p-3 rounded-lg text-white"
+              >
+                <option>Modern</option>
+                <option>Boho</option>
+                <option>Industrial</option>
+                <option>Minimalist</option>
+              </select>
             </div>
-          ))}
-        </div>
-      </section>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Budget: ${budget}</label>
+              <input 
+                type="range" 
+                min="10" 
+                max="200" 
+                value={budget} 
+                onChange={(e) => setBudget(Number(e.target.value))}
+                className="w-full accent-green-500"
+              />
+            </div>
+          </div>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-800 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400">
-          <p>Built with 💚 for sustainable living | UpcycleAI 2025</p>
+          {/* Submit Button */}
+          <button 
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-4 bg-green-500 hover:bg-green-600 text-black font-bold rounded-xl transition-all"
+          >
+            {loading ? "Analyzing with AI..." : "Get Renovations"}
+          </button>
         </div>
-      </footer>
-    </div>
+
+        {/* RESULTS DISPLAY */}
+        {result && (
+          <div className="bg-gray-800 p-6 rounded-2xl border border-green-500/30 shadow-2xl animate-fade-in">
+            <h2 className="text-3xl font-bold text-white mb-4">{result.title}</h2>
+            
+            <div className="flex gap-4 mb-6">
+              <span className="bg-green-900 text-green-300 px-3 py-1 rounded-full text-sm">
+                Cost: {result.total_cost}
+              </span>
+              <span className="bg-blue-900 text-blue-300 px-3 py-1 rounded-full text-sm">
+                Difficulty: {result.difficulty}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold text-gray-300">Steps:</h3>
+              <ul className="space-y-3">
+                {result.transformations?.map((t: any, i: number) => (
+                  <li key={i} className="flex items-start gap-3 bg-gray-900 p-3 rounded-lg">
+                    <span className="text-green-400 font-bold">✓</span>
+                    <div>
+                      <span className="block font-bold text-white">{t.item}</span>
+                      <span className="text-gray-400 text-sm">{t.action}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
