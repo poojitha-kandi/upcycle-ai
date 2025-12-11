@@ -25,7 +25,26 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert interior designer specialized in renter-friendly, sustainable upgrades. Analyze the provided image. Suggest 3 specific DIY improvements that match the user\'s style and budget. Return ONLY valid JSON.'
+          // UPDATED PROMPT: We now ask for "steps" instead of "transformations" to match your UI
+          content: `You are an expert interior designer specialized in renter-friendly, sustainable upgrades. Analyze the provided image. Suggest 3 specific DIY improvements that match the user's style and budget. 
+
+Return ONLY valid JSON with this exact structure:
+{
+  "title": "A catchy title for the transformation plan",
+  "steps": [
+    {
+      "instruction": "Detailed description of what to do (e.g. Paint the legs gold)",
+      "cost": "$XX"
+    }
+  ],
+  "total_cost": "$XXX",
+  "difficulty": "Easy" | "Medium" | "Hard"
+}
+
+Ensure all steps are:
+- Renter-friendly (no permanent changes)
+- Within the specified budget
+- Matching the chosen style`
         },
         {
           role: 'user',
@@ -33,22 +52,24 @@ export async function POST(request: NextRequest) {
             {
               type: 'image_url',
               image_url: {
-                url: `data:image/jpeg;base64,${image}`
+                // FIXED: Send the image string directly (it already has the data:image prefix)
+                url: image 
               }
             },
             {
               type: 'text',
-              text: `Style: ${style}, Budget: ${budget}`
+              text: `Style: ${style}, Budget: $${budget}`
             }
           ]
         }
       ],
       response_format: { type: 'json_object' },
-      max_tokens: 1000
+      max_tokens: 1500
     });
 
     // Parse the response
-    const result = JSON.parse(completion.choices[0].message.content || '{}');
+    const content = completion.choices[0].message.content;
+    const result = JSON.parse(content || '{}');
 
     return NextResponse.json(result, { status: 200 });
 

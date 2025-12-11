@@ -10,10 +10,24 @@ export default function Home() {
   const [style, setStyle] = useState("Modern");
   const [budget, setBudget] = useState(50);
   const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(selectedFile);
+      setPreview(previewUrl);
+    }
+  };
+
+  const clearImage = () => {
+    setFile(null);
+    if (preview) {
+      URL.revokeObjectURL(preview); // Clean up memory
+      setPreview(null);
     }
   };
 
@@ -66,9 +80,33 @@ export default function Home() {
         <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800 space-y-6">
           
           {/* File Upload */}
-          <div className="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center hover:border-green-500 transition-colors">
-            <input type="file" onChange={handleFileChange} className="text-white" />
-            <p className="mt-2 text-sm text-gray-500">Upload your furniture photo</p>
+          <div className="border-2 border-dashed border-gray-700 rounded-xl overflow-hidden hover:border-green-500 transition-colors relative">
+            {preview ? (
+              <div className="relative">
+                <img 
+                  src={preview} 
+                  alt="Preview" 
+                  className="w-full h-64 object-cover rounded-xl"
+                />
+                <button
+                  onClick={clearImage}
+                  className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold shadow-lg transition-all"
+                >
+                  Change Image
+                </button>
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleFileChange} 
+                  className="text-white" 
+                  id="file-input"
+                />
+                <p className="mt-2 text-sm text-gray-500">Upload your furniture photo</p>
+              </div>
+            )}
           </div>
 
           {/* Controls */}

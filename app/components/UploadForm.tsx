@@ -5,12 +5,27 @@ import { Upload, DollarSign, Palette } from 'lucide-react';
 
 type Style = 'Boho' | 'Modern' | 'Minimalist';
 
+interface Transformation {
+  item: string;
+  action: string;
+  cost: string;
+}
+
+interface AnalysisResult {
+  title: string;
+  transformations: Transformation[];
+  total_cost: string;
+  difficulty: string;
+}
+
 export default function UploadForm() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [selectedStyle, setSelectedStyle] = useState<Style>('Modern');
   const [budget, setBudget] = useState<number>(50);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string>('');
 
   const styles: Style[] = ['Boho', 'Modern', 'Minimalist'];
 
@@ -18,6 +33,8 @@ export default function UploadForm() {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedImage(file);
+      setResult(null);
+      setError('');
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewUrl(reader.result as string);
@@ -35,13 +52,56 @@ export default function UploadForm() {
     }
 
     setIsAnalyzing(true);
+    setError('');
+    setResult(null);
 
-    // TODO: Implement API call to analyze image
-    // For now, just simulate a delay
-    setTimeout(() => {
+    try {
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(selectedImage);
+      
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        // Remove the data:image/...;base64, prefix
+        const base64Image = base64String.split(',')[1];
+
+        try {
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              image: base64Image,
+              style: selectedStyle,
+              budget: budget,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to analyze image');
+          }
+
+          setResult(data);
+          setIsAnalyzing(false);
+        } catch (err) {
+          console.error('Error analyzing image:', err);
+          setError(err instanceof Error ? err.message : 'Failed to analyze image. Please try again.');
+          setIsAnalyzing(false);
+        }
+      };
+
+      reader.onerror = () => {
+        setError('Failed to read image file. Please try again.');
+        setIsAnalyzing(false);
+      };
+    } catch (err) {
+      console.error('Error processing image:', err);
+      setError('Failed to process image. Please try again.');
       setIsAnalyzing(false);
-      alert(`Analysis complete!\nStyle: ${selectedStyle}\nBudget: $${budget}\n\nAI integration coming soon!`);
-    }, 2000);
+    }
   };
 
   return (
@@ -169,10 +229,59 @@ export default function UploadForm() {
         )}
       </button>
 
+      {/* Error Message */}
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
+
       {/* Info Text */}
       <p className="text-center text-sm text-gray-500">
         🔒 Your photos are processed securely and never stored
       </p>
+
+      {/* Results Section */}
+      {result && (
+        <div className="mt-8 p-6 bg-gradient-to-br from-emerald-900/20 to-green-900/20 border border-emerald-500/30 rounded-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-bold text-emerald-400">{result.title}</h3>
+            <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 text-sm font-medium rounded-full">
+              {result.difficulty}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {result.transformations.map((transformation, index) => (
+              <div key={index} className="p-4 bg-black/30 rounded-lg border border-emerald-500/20">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-white mb-1">{transformation.item}</h4>
+                    <p className="text-gray-300 text-sm">{transformation.action}</p>
+                  </div>
+                  <span className="text-emerald-400 font-bold whitespace-nowrap">{transformation.cost}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-4 border-t border-emerald-500/20 flex justify-between items-center">
+            <span className="text-gray-300 font-medium">Total Estimated Cost:</span>
+            <span className="text-2xl font-bold text-emerald-400">{result.total_cost}</span>
+          </div>
+
+          <button
+            onClick={() => {
+              setResult(null);
+              setSelectedImage(null);
+              setPreviewUrl('');
+            }}
+            className="w-full py-3 px-4 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all"
+          >
+            Try Another Image
+          </button>
+        </div>
+      )}
     </form>
   );
 }
